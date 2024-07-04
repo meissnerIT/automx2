@@ -93,7 +93,7 @@ def _subtree(parent: Element, key: str, value):
         _str_element(parent, key, value)
 
 
-def _mail_account_payload(local: str, domain: str, account_type: str, account_name: str) -> dict:
+def _mail_account_payload(local: str, domain: str, account_type: str, account_name: str, password: str) -> dict:
     address = f'{local}@{domain}'
     uuid = unique()
     return {
@@ -106,6 +106,7 @@ def _mail_account_payload(local: str, domain: str, account_type: str, account_na
         'IncomingMailServerPortNumber': -1,
         'IncomingMailServerUseSSL': None,
         'IncomingMailServerUsername': None,
+        'IncomingPassword': password,
         'OutgoingMailServerAuthentication': 'EmailAuthPassword',
         'OutgoingMailServerHostName': None,
         'OutgoingMailServerPortNumber': -1,
@@ -121,12 +122,13 @@ def _mail_account_payload(local: str, domain: str, account_type: str, account_na
     }
 
 
-def _dav_account_payload(local: str, domain: str, dav_type: str) -> dict:
+def _dav_account_payload(local: str, domain: str, dav_type: str, password: str) -> dict:
     address = f'{local}@{domain}'
     uuid = unique()
     return {
         f'{DAVSERVER_TYPE_MAP[dav_type]}AccountDescription': address,
         f'{DAVSERVER_TYPE_MAP[dav_type]}HostName': None,
+        f'{DAVSERVER_TYPE_MAP[dav_type]}Password': password,
         f'{DAVSERVER_TYPE_MAP[dav_type]}Port': None,
         f'{DAVSERVER_TYPE_MAP[dav_type]}PrincipalURL': None,
         f'{DAVSERVER_TYPE_MAP[dav_type]}UseSSL': None,
@@ -191,7 +193,7 @@ def _preferred_server(servers: List[Server], type_: str) -> Server:
 
 
 class AppleGenerator(ConfigGenerator):
-    def client_config(self, local_part: str, domain_part: str, display_name: str) -> str:
+    def client_config(self, local_part: str, domain_part: str, display_name: str, password: str) -> str:
         log.info(f'Creating mobileconfig for {local_part}@{domain_part}')
         root_element = Element('plist', attrib={'version': '1.0'})
         domain: Domain = Domain.query.filter_by(name=domain_part).first()
@@ -218,7 +220,7 @@ class AppleGenerator(ConfigGenerator):
         smtp_server = _preferred_server(servers, 'smtp')
         if not smtp_server:  # pragma: no cover (not expected during testing)
             raise NoServersForDomain(f'No SMTP server for domain "{domain_part}"')
-        account = _mail_account_payload(local_part, domain_part, SERVER_TYPE_MAP[mail_server.type][1], lookup_result.cn)
+        account = _mail_account_payload(local_part, domain_part, SERVER_TYPE_MAP[mail_server.type][1], lookup_result.cn, password)
         config = []
         for server in [mail_server, smtp_server]:
             direction = SERVER_TYPE_MAP[server.type][0]
@@ -243,7 +245,7 @@ class AppleGenerator(ConfigGenerator):
             dav_servers = list(filter(None, dav_servers))
             for server in dav_servers:
                 dav_type = DAVSERVER_TYPE_MAP[server.type]
-                account = _dav_account_payload(local_part, domain_part, server.type)
+                account = _dav_account_payload(local_part, domain_part, server.type, password)
                 account[f'{dav_type}HostName'] = urlparse(server.url).netloc
                 if server.port > 0:
                     account[f'{dav_type}Port'] = server.port

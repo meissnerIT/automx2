@@ -39,20 +39,24 @@ class AppleView(MailConfig, MethodView):
 
     def get(self):
         """GET request is expected to contain ?emailaddress=user@example.com"""
-        address = request.args.get(EMAIL_MOZILLA, '')
-        realname = request.args.get('name', '')
+        address = request.values.get(EMAIL_MOZILLA, '')
+        realname = request.values.get('name', '')
         if not address:
             message = f'Missing request argument "{EMAIL_MOZILLA}"'
             log.error(message)
             return message, 400
         try:
-            return self.config_from_address(address, realname)
+            return self.config_from_address(address, realname, request.values.get('password', ''))
         except NotFoundException:
             return '', 204
         except AutomxException as e:
             log.exception(e)
             abort(400)
 
+    def post(self):
+        """Provide POST in order to keep submitted password out of the logs"""
+        return self.get()
+
     def config_response(self, local_part, domain_part: str, realname: str, password: str) -> str:
-        data = AppleGenerator().client_config(local_part, domain_part, realname)
+        data = AppleGenerator().client_config(local_part, domain_part, realname, password)
         return data
