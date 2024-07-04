@@ -220,7 +220,8 @@ class AppleGenerator(ConfigGenerator):
         smtp_server = _preferred_server(servers, 'smtp')
         if not smtp_server:  # pragma: no cover (not expected during testing)
             raise NoServersForDomain(f'No SMTP server for domain "{domain_part}"')
-        account = _mail_account_payload(local_part, domain_part, SERVER_TYPE_MAP[mail_server.type][1], lookup_result.cn, password)
+        account_name = display_name # changed from lookup_result.cn to display_name
+        account = _mail_account_payload(local_part, domain_part, SERVER_TYPE_MAP[mail_server.type][1], account_name, password)
         config = []
         for server in [mail_server, smtp_server]:
             direction = SERVER_TYPE_MAP[server.type][0]
