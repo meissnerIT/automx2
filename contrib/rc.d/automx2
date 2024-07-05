@@ -1,0 +1,24 @@
+#!/bin/sh
+#
+# PROVIDE: automx2
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=automx2
+rcvar=automx2_enable
+
+automx2_user=automx2
+automx2_group=automx2
+automx2_env="AUTOMX2_CONF=/srv/www/automx2/.automx2.conf"
+pidfile=/var/run/automx2/automx2.pid
+command=/srv/www/automx2/.venv/bin/gunicorn
+command_interpreter=/srv/www/automx2/.venv/bin/python3
+command_args="--daemon --pid ${pidfile} --access-logfile /srv/www/automx2/logs/access.log --error-logfile /srv/www/automx2/logs/error.log --capture-output 'automx2.server:app'"
+
+start_precmd="install -d -o ${automx2_user} -g ${automx2_group} $(dirname ${pidfile})"
+
+load_rc_config ${name}
+run_rc_command "$1"
+
