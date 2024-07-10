@@ -229,7 +229,8 @@ class AppleGenerator(ConfigGenerator):
             account[f'{direction}MailServerPortNumber'] = server.port
             account[f'{direction}MailServerUsername'] = self.pick_one(server.user_name, lookup_result.uid)
             account[f'{direction}MailServerAuthentication'] = _map_authentication(server)
-            account[f'{direction}MailServerUseSSL'] = socket_type_needs_ssl(server.socket_type)
+            # 2024-07-10, mm: We need to set IncomingMailServerUseSSL=true if we want to use IMAP port 143 with STARTTLS
+            account[f'{direction}MailServerUseSSL'] = server.socket_type in ['SSL', 'STARTTLS']
         account = strip_none_values(account)
         config.append(account)
 
